@@ -1,0 +1,602 @@
+[
+  {
+    "id": "TR-101",
+    "caseId": "C-01",
+    "version": "v1 基线",
+    "title": "归纳公开产品反馈",
+    "input": "汇总三条虚构产品反馈，提炼共同主题并附来源。",
+    "expectedSkill": "feedback_summary",
+    "predictedSkill": "feedback_summary",
+    "expectedTool": "retrieve_feedback",
+    "predictedTool": "retrieve_feedback",
+    "success": true,
+    "tokens": 2840,
+    "latency": 8.4,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为反馈归纳",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "检索、聚类、附来源",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发归纳 Skill",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 retrieve_feedback",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "归纳为两个主题",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "来源完整",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "",
+    "failureType": "",
+    "note": "",
+    "inDataset": true
+  },
+  {
+    "id": "TR-201",
+    "caseId": "C-01",
+    "version": "v2 候选",
+    "title": "归纳公开产品反馈",
+    "input": "汇总三条虚构产品反馈，提炼共同主题并附来源。",
+    "expectedSkill": "feedback_summary",
+    "predictedSkill": "feedback_summary",
+    "expectedTool": "retrieve_feedback",
+    "predictedTool": "retrieve_feedback",
+    "success": true,
+    "tokens": 2510,
+    "latency": 7.2,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为反馈归纳",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "检索、聚类、附来源",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发归纳 Skill",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 retrieve_feedback",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "归纳为两个主题",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "来源完整",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "",
+    "failureType": "",
+    "note": "",
+    "inDataset": true
+  },
+  {
+    "id": "TR-102",
+    "caseId": "C-02",
+    "version": "v1 基线",
+    "title": "查询版本变更",
+    "input": "查询虚构应用本周的版本变更，给出发布日期。",
+    "expectedSkill": "release_lookup",
+    "predictedSkill": "",
+    "expectedTool": "search_release_notes",
+    "predictedTool": "web_search",
+    "success": false,
+    "tokens": 4510,
+    "latency": 16.8,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为版本查询",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "查询版本记录",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "检查是否触发 release_lookup · 漏触发",
+        "status": "error"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 web_search",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "附发布日期",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "检查时效",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "Skill",
+    "failureType": "漏触发",
+    "note": "未触发专用查询，通用搜索返回过期页面。",
+    "inDataset": true
+  },
+  {
+    "id": "TR-202",
+    "caseId": "C-02",
+    "version": "v2 候选",
+    "title": "查询版本变更",
+    "input": "查询虚构应用本周的版本变更，给出发布日期。",
+    "expectedSkill": "release_lookup",
+    "predictedSkill": "release_lookup",
+    "expectedTool": "search_release_notes",
+    "predictedTool": "search_release_notes",
+    "success": true,
+    "tokens": 2910,
+    "latency": 9.8,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为版本查询",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "查询版本记录",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "检查是否触发 release_lookup",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 search_release_notes",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "附发布日期",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "检查时效",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "",
+    "failureType": "",
+    "note": "",
+    "inDataset": true
+  },
+  {
+    "id": "TR-103",
+    "caseId": "C-03",
+    "version": "v1 基线",
+    "title": "估算活动所需时间",
+    "input": "按四个环节的预计时长合计活动时间。",
+    "expectedSkill": "",
+    "predictedSkill": "calendar_booking",
+    "expectedTool": "calculator",
+    "predictedTool": "calendar_create",
+    "success": false,
+    "tokens": 3790,
+    "latency": 13.1,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为时长计算 · 误触发",
+        "status": "error"
+      },
+      {
+        "stage": "规划",
+        "observation": "提取时长并求和",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "无需专门 Skill",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 calendar_create",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "输出分项和合计",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "检查单位",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "意图",
+    "failureType": "误触发",
+    "note": "误判为安排会议，造成错误 Skill 与 Tool 调用。",
+    "inDataset": true
+  },
+  {
+    "id": "TR-203",
+    "caseId": "C-03",
+    "version": "v2 候选",
+    "title": "估算活动所需时间",
+    "input": "按四个环节的预计时长合计活动时间。",
+    "expectedSkill": "",
+    "predictedSkill": "",
+    "expectedTool": "calculator",
+    "predictedTool": "calculator",
+    "success": true,
+    "tokens": 1890,
+    "latency": 5.1,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为时长计算",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "提取时长并求和",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "无需专门 Skill",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 calculator",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "输出分项和合计",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "检查单位",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "",
+    "failureType": "",
+    "note": "",
+    "inDataset": true
+  },
+  {
+    "id": "TR-104",
+    "caseId": "C-04",
+    "version": "v1 基线",
+    "title": "比较两个虚构套餐",
+    "input": "按给定的价格表比较 A、B 两个套餐的年度费用。",
+    "expectedSkill": "pricing_compare",
+    "predictedSkill": "pricing_compare",
+    "expectedTool": "calculate_price",
+    "predictedTool": "calculate_price",
+    "success": false,
+    "tokens": 5220,
+    "latency": 20.6,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为费用比较",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "读取费率、计算、比较",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发 pricing_compare",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 calculate_price · 参数错误",
+        "status": "error"
+      },
+      {
+        "stage": "聚合",
+        "observation": "列出年度费用",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "复核单位",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "Tool",
+    "failureType": "参数错误",
+    "note": "工具选对但遗漏 billing_period，月费被当作年费。",
+    "inDataset": true
+  },
+  {
+    "id": "TR-204",
+    "caseId": "C-04",
+    "version": "v2 候选",
+    "title": "比较两个虚构套餐",
+    "input": "按给定的价格表比较 A、B 两个套餐的年度费用。",
+    "expectedSkill": "pricing_compare",
+    "predictedSkill": "pricing_compare",
+    "expectedTool": "calculate_price",
+    "predictedTool": "calculate_price",
+    "success": true,
+    "tokens": 4010,
+    "latency": 14.3,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为费用比较",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "读取费率、计算、比较",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发 pricing_compare",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 calculate_price",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "列出年度费用",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "复核单位",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "",
+    "failureType": "",
+    "note": "",
+    "inDataset": true
+  },
+  {
+    "id": "TR-105",
+    "caseId": "C-05",
+    "version": "v1 基线",
+    "title": "生成带引用的摘要",
+    "input": "将四段虚构资料概括为三点，并列出每点来源。",
+    "expectedSkill": "source_summary",
+    "predictedSkill": "source_summary",
+    "expectedTool": "retrieve_sources",
+    "predictedTool": "retrieve_sources",
+    "success": false,
+    "tokens": 4320,
+    "latency": 15.2,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为带引用摘要",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "检索、摘要、引用",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发 source_summary",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 retrieve_sources",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "第 3 点遗漏来源 · 结果不完整",
+        "status": "error"
+      },
+      {
+        "stage": "验证",
+        "observation": "完整性校验未拦截",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "聚合",
+    "failureType": "结果不完整",
+    "note": "第 3 点遗漏对应来源。",
+    "inDataset": true
+  },
+  {
+    "id": "TR-205",
+    "caseId": "C-05",
+    "version": "v2 候选",
+    "title": "生成带引用的摘要",
+    "input": "将四段虚构资料概括为三点，并列出每点来源。",
+    "expectedSkill": "source_summary",
+    "predictedSkill": "source_summary",
+    "expectedTool": "retrieve_sources",
+    "predictedTool": "retrieve_sources",
+    "success": false,
+    "tokens": 3830,
+    "latency": 13.8,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为带引用摘要",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "检索、摘要、引用",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发 source_summary",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 retrieve_sources",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "第 3 点遗漏来源 · 结果不完整",
+        "status": "error"
+      },
+      {
+        "stage": "验证",
+        "observation": "完整性校验未拦截",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "聚合",
+    "failureType": "结果不完整",
+    "note": "候选版本仍漏掉第 3 点来源，校验也未拦截。",
+    "inDataset": true
+  },
+  {
+    "id": "TR-106",
+    "caseId": "C-06",
+    "version": "v1 基线",
+    "title": "检查表格字段完整性",
+    "input": "检查虚构样表中的必填字段是否齐全。",
+    "expectedSkill": "table_validate",
+    "predictedSkill": "table_validate",
+    "expectedTool": "validate_schema",
+    "predictedTool": "validate_schema",
+    "success": true,
+    "tokens": 2100,
+    "latency": 6.7,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为字段校验",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "读取字段并验证",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发 table_validate",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 validate_schema",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "列出缺失字段",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "输出与规则一致",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "",
+    "failureType": "",
+    "note": "",
+    "inDataset": true
+  },
+  {
+    "id": "TR-206",
+    "caseId": "C-06",
+    "version": "v2 候选",
+    "title": "检查表格字段完整性",
+    "input": "检查虚构样表中的必填字段是否齐全。",
+    "expectedSkill": "table_validate",
+    "predictedSkill": "table_validate",
+    "expectedTool": "validate_schema",
+    "predictedTool": "validate_schema",
+    "success": true,
+    "tokens": 1960,
+    "latency": 5.9,
+    "steps": [
+      {
+        "stage": "意图",
+        "observation": "识别为字段校验",
+        "status": "ok"
+      },
+      {
+        "stage": "规划",
+        "observation": "读取字段并验证",
+        "status": "ok"
+      },
+      {
+        "stage": "Skill",
+        "observation": "触发 table_validate",
+        "status": "ok"
+      },
+      {
+        "stage": "Tool",
+        "observation": "调用 validate_schema",
+        "status": "ok"
+      },
+      {
+        "stage": "聚合",
+        "observation": "列出缺失字段",
+        "status": "ok"
+      },
+      {
+        "stage": "验证",
+        "observation": "输出与规则一致",
+        "status": "ok"
+      }
+    ],
+    "failureStage": "",
+    "failureType": "",
+    "note": "",
+    "inDataset": true
+  }
+]
