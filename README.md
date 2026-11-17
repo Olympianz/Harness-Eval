@@ -16,7 +16,7 @@
 
 ## 本地运行
 
-需要 Node.js 22.13+ 和 pnpm 11.25.0。安装对应版本的 pnpm 后执行：
+推荐 Node.js 24 LTS 和 pnpm 11.25.0。安装对应版本的 pnpm 后执行：
 
 ```bash
 pnpm install --frozen-lockfile
@@ -31,7 +31,7 @@ pnpm build
 pnpm start
 ```
 
-`start` 使用 Wrangler 在本地运行构建后的 Worker；端口以命令输出为准。项目使用 React、TypeScript、Vinext / Vite 和 Tailwind，依赖锁文件随仓库提供。
+`start` 使用 Vite 在本地 Workers 运行时预览构建产物；端口以命令输出为准。项目使用 React、TypeScript、Vinext / Vite 和 Tailwind，依赖锁文件随仓库提供。
 
 ## 十分钟体验
 
@@ -50,13 +50,22 @@ Trigger 指标按预期和实际 Skill 名称计算；选错 Skill 同时产生�
 
 回归仅使用两版本都存在、且纳入 Dataset 的 case。每个 case / version 应只有一条 Trace；重复运行需要先在外部选定代表记录。内置成功率为 2/6 → 5/6，Skill Precision / Recall 为 80% → 100%，工具名称准确率为 4/6 → 6/6。
 
-这是离线交互原型，不运行 Agent、调用模型、自动评分或自动脱敏。数据保存在当前浏览器 localStorage，换设备或清除浏览器数据不会自动恢复，请通过 JSONL 导出备份。
+这是离线交互原型，不运行 Agent、调用模型、自动评分或自动脱敏。数据保存在当前浏览器 localStorage，换设备或清除浏览器数据不会自动恢复，当前 JSONL 仅导出当前项目 Dataset，不是全部项目和 Trace 的完整备份。
 
-## 私有部署
+## 独立私有部署
 
-源代码不包含线上部署地址、部署身份或访问凭据。`.openai/hosting.json` 仅保留无资源绑定的配置。原始站点的私有访问由托管平台管理，克隆仓库不会继承该策略。
+本项目已移除 ChatGPT Sites 托管与登录依赖。使用自己的 GitHub 和 Cloudflare Workers 账号，通过 Cloudflare Access 管理访问权限。
 
-部署时请在目标平台配置身份认证和访问授权，并验证未授权用户无法访问。仓库没有自动部署工作流，也没有启用 GitHub Pages。`package.json` 的 `private: true` 只防止 npm 误发布，不控制 GitHub 仓库或网站可见性。
+完整步骤见 [独立部署与管理](docs/independent-deployment.md)。初始配置关闭公网和预览入口；先部署 Worker，再配置 Access，最后启用访问地址。仓库包含 GitHub Actions 检查流程，自动发布需配置生产密钥并显式启用。
+
+```bash
+pnpm cf:login
+pnpm cf:whoami
+pnpm deploy:dry-run
+pnpm deploy
+```
+
+首次 deploy 不会自动创建 Access 策略或公开网站。`private: true` 仅防止 npm 误发布，不控制网站权限。
 
 ## 目录
 
@@ -68,7 +77,18 @@ Trigger 指标按预期和实际 Skill 名称计算；选错 Skill 同时产生�
 | `components/ui/` | UI 组件 |
 | `docs/` | 完整操作手册及底层原理 |
 | `examples/traces/` | 合成 Trace 和导入练习 |
-| `scripts/`、`build/` | 构建和本地运行支持 |
+| `wrangler.jsonc`、`.github/workflows/` | 独立托管和自动发布配置 |
 | `db/`、`examples/d1/` | 模板可选数据库示例；当前实验台未使用 |
 
 第三方组件和构建支持文件的许可声明保留在对应文件中。
+
+## 需求管理
+
+[Linear · Harness Eval](https://linear.app/1w1p/project/harness-eval-7fa2667662e8) 管理需求、验收和后续规划；GitHub 管理代码。提交或 PR 应引用对应的 Linear 编号。
+
+- 1W1-157：独立部署配置与 Sites 解耦
+- 1W1-158：多项目数据隔离
+- 1W1-159：导入弹窗修复
+- 1W1-160：Cloudflare 上线、Access 与 CI 验证
+- 1W1-161：D1 持久化规划（未实现）
+- 1W1-162：完整备份恢复（未实现）

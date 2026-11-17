@@ -17,14 +17,34 @@ const pct=(n:number|null)=>n===null?"—":Math.round(n*100)+"%";
 const sign=(n:number,suffix="")=>(n>0?"+":"")+Number(n.toFixed(1))+suffix;
 function saveFile(name:string,content:string){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type:"application/x-ndjson"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
-export default function Home(){
-  const [rows,setRows]=useState<Trace[]>(exampleTraces),[ready,setReady]=useState(false);
+type Project = {id:string;name:string;rows:Trace[]};
+const projectKey="harness-eval-projects-v1";
+export default function Workspace(){
+  const [projects,setProjects]=useState<Project[]>([{id:"default",name:"默认项目",rows:exampleTraces}]);
+  const [active,setActive]=useState("default");
+  const [ready,setReady]=useState(false);
+  const [error,setError]=useState("");
+  // Browser storage is restored after hydration, before enabling edits.
+  /* eslint-disable react-hooks/set-state-in-effect -- Restore browser-only storage after hydration before rendering editable UI. */
+  useEffect(()=>{try{
+    const saved=localStorage.getItem(projectKey);
+    if(saved){const data=JSON.parse(saved);if(!Array.isArray(data.projects)||!data.projects.length||data.projects.some((p:Project)=>!p||typeof p.id!=="string"||typeof p.name!=="string"||!Array.isArray(p.rows))||new Set(data.projects.map((p:Project)=>p.id)).size!==data.projects.length)throw Error("invalid projects");setProjects(data.projects.map((p:Project)=>({...p,rows:p.rows.map(normalize)})));setActive(data.projects.some((p:Project)=>p.id===data.active)?data.active:data.projects[0].id);}
+    else{const legacy=localStorage.getItem("harness-eval-lab-v1");if(legacy){const rows=JSON.parse(legacy);if(!Array.isArray(rows))throw Error("invalid traces");setProjects([{id:"default",name:"默认项目",rows:rows.map(normalize)}]);}}
+    setReady(true);
+  }catch{setError("读取项目数据失败，已保留原始数据。请先备份浏览器数据后再重试。");}},[]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  useEffect(()=>{if(ready)try{localStorage.setItem(projectKey,JSON.stringify({projects,active}));}catch{toast.error("项目保存失败：浏览器存储空间不足");}},[projects,active,ready]);
+  const project=projects.find(p=>p.id===active)??projects[0];
+  function nameProject(create:boolean){const name=prompt(create?"新项目名称":"修改项目名称",create?"":project.name)?.trim();if(!name)return;if(name.length>60){alert("项目名称最多60个字符");return;}if(projects.some(p=>p.name===name&&(create||p.id!==active))){alert("已存在同名项目");return;}if(create){const id=crypto.randomUUID();setProjects(old=>[...old,{id,name,rows:[]}]);setActive(id);}else setProjects(old=>old.map(p=>p.id===active?{...p,name}:p));}
+  if(!ready)return <div className="content">{error||"正在载入项目…"}</div>;
+  return <Home key={project.id} project={project} projects={projects} onSwitch={setActive} onCreate={()=>nameProject(true)} onRename={()=>nameProject(false)} setRows={update=>setProjects(old=>old.map(p=>p.id===project.id?{...p,rows:typeof update==="function"?update(p.rows):update}:p))}/>;
+}
+function Home({project,projects,onSwitch,onCreate,onRename,setRows}:{project:Project;projects:Project[];onSwitch:(id:string)=>void;onCreate:()=>void;onRename:()=>void;setRows:(update:Trace[]|((old:Trace[])=>Trace[]))=>void}){
+  const rows=project.rows;
   const [view,setView]=useState<"traces"|"dataset"|"eval">("traces"),[selectedId,setSelectedId]=useState<string|null>(null),[draft,setDraft]=useState<Trace|null>(null);
   const [importOpen,setImportOpen]=useState(false),[paste,setPaste]=useState(""),[search,setSearch]=useState(""),[filter,setFilter]=useState("all");
-  const [baseVersion,setBaseVersion]=useState("v1 基线"),[candidateVersion,setCandidateVersion]=useState("v2 候选");
+  const [baseVersion,setBaseVersion]=useState(project.rows[0]?.version??""),[candidateVersion,setCandidateVersion]=useState([...new Set(project.rows.map(r=>r.version))][1]??"");
   const fileRef=useRef<HTMLInputElement>(null);
-  useEffect(()=>{try{const saved=localStorage.getItem("harness-eval-lab-v1");if(saved){const data=JSON.parse(saved);if(Array.isArray(data))setRows(data.map(normalize))}}catch{toast.error("读取本地数据失败，已载入示例")}setReady(true)},[]);
-  useEffect(()=>{if(ready)try{localStorage.setItem("harness-eval-lab-v1",JSON.stringify(rows))}catch{toast.error("本地存储已满，请导出 Dataset")}},[rows,ready]);
   const dataset=rows.filter(r=>r.inDataset),versions=[...new Set(rows.map(r=>r.version))];
   const visible=useMemo(()=>rows.filter(r=>(filter==="all"||filter==="failed"&&!r.success||filter==="labeled"&&!!r.failureStage||filter==="dataset"&&r.inDataset)&&[r.id,r.caseId,r.title,r.input].join(" ").toLowerCase().includes(search.toLowerCase())),[rows,search,filter]);
   const pairs=dataset.filter(r=>r.version===baseVersion).flatMap(base=>{const candidate=dataset.find(r=>r.version===candidateVersion&&r.caseId===base.caseId);return candidate?[{base,candidate}]:[]});
@@ -33,18 +53,18 @@ export default function Home(){
   function open(r:Trace){setSelectedId(r.id);setDraft({...r})}
   function commit(){if(!draft)return;setRows(old=>old.map(r=>r.id===draft.id?draft:r));setSelectedId(null);toast.success("标注已保存")}
   function importText(text:string){try{const incoming=parseTraces(text);const known=new Set(rows.map(r=>r.id)),seen=new Set<string>();for(const r of incoming){if(known.has(r.id)||seen.has(r.id))throw Error("重复 Trace ID："+r.id);seen.add(r.id)}setRows(old=>[...incoming,...old]);setPaste("");setImportOpen(false);toast.success("已导入 "+incoming.length+" 条 Trace")}catch(e){toast.error(e instanceof Error?e.message:"导入失败")}}
-  function exportData(){if(!dataset.length)return toast.error("Dataset 为空");saveFile("harness-eval-dataset.jsonl",dataset.map(r=>JSON.stringify(r)).join("\n")+"\n");toast.success("已导出 "+dataset.length+" 条样本")}
-  function reset(){if(confirm("恢复虚构示例数据？当前浏览器的导入和标注会被覆盖。")){setRows(exampleTraces);setBaseVersion("v1 基线");setCandidateVersion("v2 候选");toast.success("已恢复示例")}}
+  function exportData(){if(!dataset.length)return toast.error("Dataset 为空");saveFile(`harness-eval-${project.id}-dataset.jsonl`,dataset.map(r=>JSON.stringify(r)).join("\n")+"\n");toast.success("已导出 "+dataset.length+" 条样本")}
+  function reset(){if(confirm("恢复当前项目的虚构示例数据？仅当前项目的导入和标注会被覆盖。")){setRows(exampleTraces);setBaseVersion("v1 基线");setCandidateVersion("v2 候选");toast.success("已恢复示例")}}
   const metricCards:[string,keyof ReturnType<typeof metrics>,"pct"|"token"|"sec"][]=[["Trigger Precision","precision","pct"],["Trigger Recall","recall","pct"],["Tool Accuracy","tool","pct"],["成功率","success","pct"],["平均 Token","tokens","token"],["平均 Latency","latency","sec"]];
   const title=view==="traces"?"运行轨迹":view==="dataset"?"评测数据集":"评测与回归";
   return <div className="app"><Toaster position="top-right" richColors/>
-    <aside className="sidebar"><div className="brand"><div className="brand-icon"><Layers3 size={19}/></div><div><b>HARNESS <em>/ LAB</em></b><small>Eval 交互实验台</small></div></div><div className="nav-label">工作区</div>
+    <aside className="sidebar"><div className="brand"><div className="brand-icon"><Layers3 size={19}/></div><div><b>HARNESS <em>/ LAB</em></b><small>Eval 交互实验台</small></div></div><div className="project-picker"><label htmlFor="project-select">当前项目</label><select id="project-select" value={project.id} onChange={e=>onSwitch(e.target.value)}>{projects.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><div><Button variant="outline" size="sm" onClick={onCreate}>新建项目</Button><Button variant="ghost" size="sm" onClick={onRename}>重命名</Button></div></div><div className="nav-label">工作区</div>
       <button className={view==="traces"?"nav active":"nav"} onClick={()=>setView("traces")}><Activity size={17}/> Trace 观察 <span>{rows.length}</span></button>
       <button className={view==="dataset"?"nav active":"nav"} onClick={()=>setView("dataset")}><Database size={17}/> Dataset 构建 <span>{dataset.length}</span></button>
       <button className={view==="eval"?"nav active":"nav"} onClick={()=>setView("eval")}><GitCompareArrows size={17}/> Eval 与回归</button>
       <div className="sidebar-foot"><ShieldCheck size={18}/><div><b>私有实验空间</b><small>数据仅保存在当前浏览器</small><p>示例为虚构场景。导入前请先脱敏。</p></div></div>
     </aside>
-    <main className="main"><header className="topbar"><div>Workspace <span>/</span> Harness Eval <span>/</span> <b>{title}</b></div><div className="top-actions"><span className="demo">● DEMO DATA</span><Button variant="outline" size="sm" onClick={reset}><RotateCcw size={14}/> 重置示例</Button></div></header>
+    <main className="main"><header className="topbar"><div>Workspace <span>/</span> {project.name} <span>/</span> <b>{title}</b></div><div className="top-actions"><Button variant="outline" size="sm" onClick={reset}><RotateCcw size={14}/> 重置示例</Button></div></header>
       <div className="content"><div className="heading"><div><span className="eyebrow">TRACE → DATASET → EVAL</span><h1>{title}</h1><p>{view==="traces"?"检查每一步的实际行为，定位首要失败环节。":view==="dataset"?"从已检查的 Trace 中挑选样本，保留预期结果与人工标注。":"用相同 case ID 配对两个版本，观察质量、成本和未修复问题。"}</p></div><div>{view==="traces"?<Button className="primary-btn" onClick={()=>setImportOpen(true)}><Plus size={17}/> 导入 Trace</Button>:view==="dataset"?<Button className="primary-btn" onClick={exportData}><Download size={16}/> 导出 JSONL</Button>:null}</div></div>
       <div className="flow"><span className={view==="traces"?"chosen":""}><i>01</i> Trace 观察</span><ArrowRight size={14}/><span className={view==="dataset"?"chosen":""}><i>02</i> Dataset 标注</span><ArrowRight size={14}/><span className={view==="eval"?"chosen":""}><i>03</i> Eval 回归</span><small>{rows.length} 条运行记录 · {dataset.length} 条样本</small></div>
       {view==="traces"&&<><div className="stat-grid">{[["运行记录",rows.length,"跨 "+versions.length+" 个版本"],["失败记录",rows.filter(r=>!r.success).length,"需要定位首要原因"],["已标注失败",rows.filter(r=>r.failureStage).length,"覆盖 "+stages.filter(s=>rows.some(r=>r.failureStage===s)).length+" 个阶段"],["进入 Dataset",dataset.length,"可用于版本评测"]].map(([name,value,note])=><div className="stat" key={name}><span>{name}</span><strong>{value}</strong><small>{note}</small></div>)}</div>

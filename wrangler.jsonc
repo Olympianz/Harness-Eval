@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "harness-eval-lab",
+  "main": "vinext/server/fetch-handler",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  // Configure Cloudflare Access before enabling any public route, then rebuild.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "observability": { "enabled": true }
+}
