@@ -50,7 +50,15 @@ Trigger 指标按预期和实际 Skill 名称计算；选错 Skill 同时产生�
 
 回归仅使用两版本都存在、且纳入 Dataset 的 case。每个 case / version 应只有一条 Trace；重复运行需要先在外部选定代表记录。内置成功率为 2/6 → 5/6，Skill Precision / Recall 为 80% → 100%，工具名称准确率为 4/6 → 6/6。
 
-这是离线交互原型，不运行 Agent、调用模型、自动评分或自动脱敏。数据保存在当前浏览器 localStorage，换设备或清除浏览器数据不会自动恢复，当前 JSONL 仅导出当前项目 Dataset，不是全部项目和 Trace 的完整备份。
+这是离线交互原型，不运行 Agent、调用模型、自动评分或自动脱敏。默认模式的数据保存在当前浏览器 localStorage，换设备或清除浏览器数据不会自动恢复，当前 JSONL 仅导出当前项目 Dataset，不是全部项目和 Trace 的完整备份。
+
+## 将应用数据库部署到 NAS
+
+在 Mac 本机终端运行 `NAS_SSH_TARGET=user@nas-host bash deploy/nas/from-mac.command`，将示例 SSH 目标换成自己的 NAS 账号和地址。该入口通过 SSH 连接 NAS，在已有容器 `harness-eval-postgres` 中初始化数据库 `harness_eval`、账号 `harness_app` 和表 `public.harness_workspace`。它仅传送数据库初始化脚本。应用继续在现有环境构建和运行。
+
+首次设置应用账号密码时请保存在密码管理器中。验证阶段使用该账号连接数据库，在事务内写入并读回标记，再回滚。看到 `PASS` 表示本次数据库读写验证通过。输出还包括容器端口的实际映射。后续应在现有应用后端配置连接并测试从页面保存和重新打开后的读回。
+
+云端应用使用 Hyperdrive 和 Workers VPC 接入这台 NAS。连接步骤和读写验收见 [Cloudflare 与 NAS 私网连接](docs/cloudflare-nas.md)。
 
 ## 独立私有部署
 

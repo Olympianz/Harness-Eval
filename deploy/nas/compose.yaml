@@ -1,0 +1,11 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/nas/Dockerfile
+    container_name: harness-eval-app
+    restart: unless-stopped
+    env_file: .env.nas
+    ports:
+      - "13000:3000"
+    mem_limit: 768m

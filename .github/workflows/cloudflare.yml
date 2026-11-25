@@ -36,5 +36,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm deploy
         env:
+          HARNESS_HYPERDRIVE_ID: ${{ vars.HARNESS_HYPERDRIVE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

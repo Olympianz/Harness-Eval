@@ -1,5 +1,7 @@
 # Harness Eval 独立部署与管理
 
+有关当前 NAS 数据库的生产配置，请使用 [Cloudflare 与 NAS 私网连接](cloudflare-nas.md)。下文记录最初的浏览器存储模式与账号、域名设置。
+
 ## 架构与范围
 代码在自己的 GitHub 仓库，运行在自己的 Cloudflare Workers 账号，Cloudflare Access 负责访问白名单。保留现有 Vinext / React 前端及 localStorage 数据。没有正式数据，本次不做历史数据迁移，不创建 D1/R2，不调用模型。默认仍包含虚构示例。
 

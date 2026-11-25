@@ -1,0 +1,15 @@
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS build
+WORKDIR /app
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+RUN npm install --global pnpm@11.25.0 && pnpm install --frozen-lockfile
+COPY . .
+RUN pnpm run build:nas
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/public ./public
+USER node
+EXPOSE 3000
+CMD ["node","server.js"]
