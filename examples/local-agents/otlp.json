@@ -1,0 +1,4 @@
+{"resourceSpans":[{"scopeSpans":[{"spans":[
+  {"traceId":"11111111111111111111111111111111","spanId":"2222222222222222","name":"scope_review","startTimeUnixNano":"1000000000","endTimeUnixNano":"3000000000","status":{"code":1}},
+  {"traceId":"11111111111111111111111111111111","spanId":"3333333333333333","parentSpanId":"2222222222222222","name":"scope_lookup","startTimeUnixNano":"1500000000","endTimeUnixNano":"1800000000","attributes":[{"key":"gen_ai.operation.name","value":{"stringValue":"execute_tool"}}],"status":{"code":1}}
+]}]}]}

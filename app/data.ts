@@ -1,7 +1,9 @@
 export const stages = ["意图", "规划", "Skill", "Tool", "聚合", "验证"] as const;
 export type Stage = typeof stages[number];
-export type Step = {stage:Stage; observation:string; status:"ok"|"warning"|"error"};
-export type Trace = {id:string;caseId:string;version:string;title:string;input:string;expectedSkill:string;predictedSkill:string;expectedTool:string;predictedTool:string;success:boolean;tokens:number;latency:number;steps:Step[];failureStage:Stage|"";failureType:string;note:string;inDataset:boolean};
+export type Step = {stage:Stage|"未分类"; spanId?:string; parentSpanId?:string; observation:string; status:"ok"|"warning"|"error"};
+export type Trace = {id:string;caseId:string;version:string;title:string;input:string;outputSummary?:string;expectedSkill:string|null;predictedSkill:string|null;expectedTool:string|null;predictedTool:string|null;success:boolean|null;tokens:number|null;latency:number|null;origin?:Origin;steps:Step[];failureStage:Stage|"";failureType:string;note:string;inDataset:boolean};
+
+export type Origin = {source:string;runId:string;projectId:string;state:"completed"|"failed"|"interrupted";digest:string};
 
 type Case = {title:string;input:string;skill:string;tool:string;baseline:[string,string,boolean,number,number,Stage|"",string,string];candidate:[string,string,boolean,number,number,Stage|"",string,string];observations:[string,string,string,string,string,string]};
 const cases:Case[]=[
@@ -17,10 +19,56 @@ export const exampleTraces:Trace[]=cases.flatMap((c,i)=>[c.baseline,c.candidate]
 export function normalize(raw:unknown,index:number):Trace{
   if(!raw||typeof raw!=="object"||Array.isArray(raw))throw Error(`第 ${index+1} 条不是对象`);
   const r=raw as Record<string,unknown>;
-  for(const k of ["caseId","version","title","input","expectedSkill","predictedSkill","expectedTool","predictedTool"])if(typeof r[k]!=="string")throw Error(`第 ${index+1} 条缺少字符串字段 ${k}`);
-  if(typeof r.success!=="boolean"||typeof r.tokens!=="number"||!Number.isFinite(r.tokens)||r.tokens<0||typeof r.latency!=="number"||!Number.isFinite(r.latency)||r.latency<0)throw Error(`第 ${index+1} 条的 success、tokens 或 latency 格式错误`);
-  const steps=Array.isArray(r.steps)?r.steps.filter((s):s is Step=>!!s&&typeof s==="object"&&stages.includes(s.stage)&&typeof s.observation==="string"&&["ok","warning","error"].includes(s.status)):[];
-  return {id:typeof r.id==="string"&&r.id.trim()?r.id:`IM-${Date.now()}-${index}`,caseId:r.caseId as string,version:r.version as string,title:r.title as string,input:r.input as string,expectedSkill:r.expectedSkill as string,predictedSkill:r.predictedSkill as string,expectedTool:r.expectedTool as string,predictedTool:r.predictedTool as string,success:r.success as boolean,tokens:r.tokens as number,latency:r.latency as number,steps,failureStage:stages.includes(r.failureStage as Stage)?r.failureStage as Stage:"",failureType:typeof r.failureType==="string"?r.failureType:"",note:typeof r.note==="string"?r.note:"",inDataset:r.inDataset===true};
+  let origin: Origin | undefined;
+  if (r.origin !== undefined) {
+    const o = r.origin as Partial<Origin> | null;
+    if (!o || ![o.projectId, o.source, o.runId].every(v => typeof v === "string" && v.trim())
+        || !["completed", "failed", "interrupted"].includes(String(o.state)) || !/^[a-f0-9]{64}$/.test(String(o.digest))) {
+      throw Error(`第 ${index+1} 条的来源标记无效`);
+    }
+    origin = {source:o.source!, runId:o.runId!, projectId:o.projectId!, state:o.state!, digest:o.digest!};
+  }
+  for (const k of ["caseId","version","title","input"])
+    if (typeof r[k] !== "string") throw Error(`第 ${index+1} 条缺少字符串字段 ${k}`);
+  for (const k of ["expectedSkill","predictedSkill","expectedTool","predictedTool"])
+    if (typeof r[k] !== "string" && !(origin && r[k] === null)) throw Error(`第 ${index+1} 条的 ${k} 无效`);
+  const numeric = (v:unknown) => (origin && v === null) || (typeof v === "number" && Number.isFinite(v) && v >= 0);
+  if ((typeof r.success !== "boolean" && !(origin && r.success === null)) || !numeric(r.tokens) || !numeric(r.latency))
+    throw Error(`第 ${index+1} 条的 success、tokens 或 latency 格式错误`);
+  const steps=Array.isArray(r.steps)?r.steps.filter((s):s is Step=>!!s&&typeof s==="object"&&(stages.includes(s.stage)||(!!origin&&s.stage==="未分类"))&&typeof s.observation==="string"&&["ok","warning","error"].includes(s.status)):[];
+  return {id:typeof r.id==="string"&&r.id.trim()?r.id:`IM-${Date.now()}-${index}`,caseId:r.caseId as string,version:r.version as string,title:r.title as string,input:r.input as string,...(typeof r.outputSummary==="string"?{outputSummary:r.outputSummary}:{}),expectedSkill:r.expectedSkill as string|null,predictedSkill:r.predictedSkill as string|null,expectedTool:r.expectedTool as string|null,predictedTool:r.predictedTool as string|null,success:r.success as boolean|null,tokens:r.tokens as number|null,latency:r.latency as number|null,steps,failureStage:stages.includes(r.failureStage as Stage)?r.failureStage as Stage:"",failureType:typeof r.failureType==="string"?r.failureType:"",note:typeof r.note==="string"?r.note:"",inDataset:r.inDataset===true,...(origin?{origin}:{})};
 }
 export function parseTraces(text:string):Trace[]{let parsed:unknown;try{parsed=JSON.parse(text)}catch{parsed=text.trim().split(/\r?\n/).filter(Boolean).map((line,i)=>{try{return JSON.parse(line)}catch{throw Error(`第 ${i+1} 行不是有效 JSON`)}})}const rows=Array.isArray(parsed)?parsed:[parsed];if(!rows.length||rows.length>2000)throw Error("每次需导入 1–2000 条 Trace");return rows.map(normalize)}
-export function metrics(rows:Trace[]){const tp=rows.filter(r=>r.expectedSkill!==""&&r.expectedSkill===r.predictedSkill).length,fp=rows.filter(r=>r.predictedSkill!==""&&r.expectedSkill!==r.predictedSkill).length,fn=rows.filter(r=>r.expectedSkill!==""&&r.expectedSkill!==r.predictedSkill).length;return {precision:tp+fp?tp/(tp+fp):null,recall:tp+fn?tp/(tp+fn):null,tool:rows.length?rows.filter(r=>r.expectedTool===r.predictedTool).length/rows.length:null,success:rows.length?rows.filter(r=>r.success).length/rows.length:null,tokens:rows.length?rows.reduce((n,r)=>n+r.tokens,0)/rows.length:0,latency:rows.length?rows.reduce((n,r)=>n+r.latency,0)/rows.length:0}}
+export function metrics(rows:Trace[]) {
+  const skills = rows.filter(r => r.expectedSkill !== null && r.predictedSkill !== null);
+  const tp = skills.filter(r => r.expectedSkill !== "" && r.expectedSkill === r.predictedSkill).length;
+  const fp = skills.filter(r => r.predictedSkill !== "" && r.expectedSkill !== r.predictedSkill).length;
+  const fn = skills.filter(r => r.expectedSkill !== "" && r.expectedSkill !== r.predictedSkill).length;
+  const tools = rows.filter(r => r.expectedTool !== null && r.predictedTool !== null);
+  const graded = rows.filter(r => r.success !== null);
+  const mean = (key:"tokens"|"latency") => {
+    const values = rows.map(r => r[key]).filter((n):n is number => n !== null);
+    return values.length ? values.reduce((a,b) => a+b, 0)/values.length : null;
+  };
+  return {precision:tp+fp?tp/(tp+fp):null, recall:tp+fn?tp/(tp+fn):null,
+    tool:tools.length?tools.filter(r=>r.expectedTool===r.predictedTool).length/tools.length:null,
+    success:graded.length?graded.filter(r=>r.success===true).length/graded.length:null,
+    tokens:mean("tokens"),latency:mean("latency")};
+}
+
+export function pairCases(dataset:Trace[], baseVersion:string, candidateVersion:string) {
+  const grouped = new Map<string,{base:Trace[];candidate:Trace[]}>();
+  for (const row of dataset) {
+    if (row.version!==baseVersion && row.version!==candidateVersion) continue;
+    const group = grouped.get(row.caseId) ?? {base:[],candidate:[]};
+    if (row.version===baseVersion) group.base.push(row);
+    if (row.version===candidateVersion) group.candidate.push(row);
+    grouped.set(row.caseId,group);
+  }
+  const pairs:{base:Trace;candidate:Trace}[] = [], ambiguous:string[] = [];
+  for (const [id,group] of grouped) {
+    if (group.base.length>1 || group.candidate.length>1) ambiguous.push(id);
+    else if (group.base.length && group.candidate.length) pairs.push({base:group.base[0],candidate:group.candidate[0]});
+  }
+  return {pairs,ambiguous};
+}
