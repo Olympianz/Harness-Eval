@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init","session_id":"demo-cdd-01","model":"demo","timestamp":1000}
+{"type":"tool_use","name":"scope_lookup","input":{"customer":"synthetic"},"timestamp":1200}
+{"type":"tool_result","name":"scope_lookup","output":"synthetic","duration_ms":200,"is_error":false,"timestamp":1400}
+{"type":"result","session_id":"demo-cdd-01","exit_code":0,"text":"synthetic","tokens":{"input":80,"output":20,"total":100},"duration_ms":1500,"timestamp":2500}

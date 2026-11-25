@@ -1,0 +1,14 @@
+{
+  "schema": "agent-run/v1",
+  "source": "cdd-request",
+  "runId": "demo-cdd-02",
+  "state": "completed",
+  "predictedSkill": "clarify",
+  "predictedTool": "scope_lookup",
+  "tokens": 130,
+  "durationMs": 1200,
+  "steps": [
+    {"stage":"Skill","name":"clarify","status":"ok"},
+    {"stage":"Tool","name":"scope_lookup","status":"ok"}
+  ]
+}

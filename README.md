@@ -100,3 +100,7 @@ pnpm deploy
 - 1W1-160：Cloudflare 上线、Access 与 CI 验证
 - 1W1-161：D1 持久化规划（未实现）
 - 1W1-162：完整备份恢复（未实现）
+
+## 接入本地 Agent 的运行记录
+
+Codex、Hermes、OTLP/JSON 文件和自研 Agent 可以按项目接入。采集器生成可重试的本地文件，通过项目密钥上报 NAS，也可以在页面中导入。运行先进入 Trace 观察，人工确认后纳入 Dataset。详见[多 Agent Trace 接入与验证](docs/local-agent-traces.md)。

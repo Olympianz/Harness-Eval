@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"demo-codex-01"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"type":"command_execution","exit_code":0,"command":"synthetic","aggregated_output":"synthetic"}}
+{"type":"item.completed","item":{"type":"agent_message","text":"synthetic"}}
+{"type":"turn.completed","usage":{"input_tokens":100,"cached_input_tokens":70,"output_tokens":20}}

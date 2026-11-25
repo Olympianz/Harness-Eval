@@ -1,0 +1,9 @@
+{
+  "inputSummary": "列出一份虚构商业尽调请求中仍缺失的信息。",
+  "outputSummary": "返回两项待确认信息，人工已检查。",
+  "expectedTool": "scope_lookup",
+  "predictedTool": "scope_lookup",
+  "expectedSkill": "",
+  "predictedSkill": "",
+  "success": true
+}
