@@ -12,7 +12,7 @@ export default function Landing() {
         <div className="ruler"><i/><i/><i/><i/><i/><i/></div>
         <div className="versions"><span>基线 v1</span><span>候选 v2</span></div>
         <div className="report-line"><span>工具选择正确</span><b>4/6 → 6/6</b></div>
-        <Link href="/demo">查看样本与评测口径 →</Link>
+        <Link href="/demo?view=eval">查看样本与评测口径 →</Link>
       </aside>
     </section>
     <section className="features" aria-label="平台能力">

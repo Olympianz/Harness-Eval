@@ -56,7 +56,16 @@ export function metrics(rows:Trace[]) {
     tokens:mean("tokens"),latency:mean("latency")};
 }
 
+export function comparisonVersions(versions: string[], preferredBase: string, preferredCandidate: string) {
+  const hasCandidate = versions.includes(preferredCandidate);
+  const base = versions.includes(preferredBase) ? preferredBase
+    : versions.find(version => version !== preferredCandidate) ?? versions[0] ?? "";
+  const candidate = hasCandidate ? preferredCandidate : versions.find(version => version !== base) ?? "";
+  return [base, candidate] as const;
+}
+
 export function pairCases(dataset:Trace[], baseVersion:string, candidateVersion:string) {
+  if (!baseVersion || !candidateVersion || baseVersion === candidateVersion) return {pairs: [], ambiguous: []};
   const grouped = new Map<string,{base:Trace[];candidate:Trace[]}>();
   for (const row of dataset) {
     if (row.version!==baseVersion && row.version!==candidateVersion) continue;
