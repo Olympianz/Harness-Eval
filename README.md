@@ -2,6 +2,10 @@
 
 中文交互实验台，用于研究 **Trace → Dataset → Eval**：导入脱敏运行轨迹、按六阶段标注失败、选择评测样本，并比较基线与候选版本。
 
+## 企业 SaaS
+
+首页介绍服务，企业从 `/workspace` 登录，管理员通过 `/admin` 开通和配置租户。交互演示位于 `/demo`，已有私有工作区位于 `/legacy`。开通、迁移和生产验收见[企业租户上线与使用](docs/enterprise-saas.md)。
+
 ## 功能
 
 - 粘贴或上传 JSON / JSONL Trace，支持搜索与筛选。
@@ -35,7 +39,7 @@ pnpm start
 
 ## 十分钟体验
 
-1. 在「Trace 观察」选择 TR-102，查看 Skill 漏触发。
+1. 打开 `/demo`，在「Trace 观察」选择 TR-102，查看 Skill 漏触发。
 2. 修改失败标注，保留「纳入 Dataset」，保存。
 3. 在「Dataset 构建」查看样本并导出数据集。
 4. 在「Eval 与回归」选择 v1 基线与 v2 候选，查看配对指标。
@@ -79,7 +83,7 @@ pnpm deploy
 
 | 路径 | 内容 |
 | --- | --- |
-| `app/page.tsx` | 页面和交互 |
+| `app/page.tsx`、`app/workbench.tsx` | 落地页和工作区交互 |
 | `app/data.ts` | Trace 类型、示例数据、导入校验、指标计算 |
 | `app/globals.css` | 样式 |
 | `components/ui/` | UI 组件 |
