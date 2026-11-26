@@ -2,25 +2,35 @@ import { withWorkspaceDb } from "#workspace-db";
 import { revisionSchema, workspaceSchema } from "@/lib/workspace";
 import { bearer, digest, reply } from "@/lib/tenant-auth";
 
+import { deviceKey, fromWorkspacePage, setDeviceKey } from "@/lib/tenant-device";
+
 export const dynamic = "force-dynamic";
 const saveSchema = revisionSchema.extend({ data: workspaceSchema });
 const denied = () => reply(401, { error: "企业访问密钥无效或租户已停用" });
 
 export async function GET(request: Request) {
-  const key = bearer(request);
+  const key = request.headers.has("authorization") ? bearer(request) : deviceKey(request);
   if (!key.startsWith("hew_")) return denied();
   try {
     const [row] = await withWorkspaceDb(sql => sql`
-      SELECT name, data, revision FROM public.eval_tenant
+      SELECT id, name, data, revision FROM public.eval_tenant
       WHERE active AND workspace_digest = ${digest(key)} FOR SHARE`);
-    return row ? reply(200, row) : denied();
+    if (!row) {
+      const response = denied();
+      return !request.headers.has("authorization") ? setDeviceKey(response, "") : response;
+    }
+    const response = reply(200, row);
+    if (fromWorkspacePage(request) && request.headers.has("authorization")) {
+      return setDeviceKey(response, request.headers.get("x-remember-key") === "1" ? key : "");
+    }
+    return response;
   } catch {
     return reply(503, { error: "企业工作区暂时无法读取" });
   }
 }
 
 export async function PUT(request: Request) {
-  const key = bearer(request);
+  const key = request.headers.has("authorization") ? bearer(request) : deviceKey(request);
   if (!key.startsWith("hew_")) return denied();
   let body;
   try {
@@ -36,6 +46,9 @@ export async function PUT(request: Request) {
       const [tenant] = await tx`SELECT id, revision FROM public.eval_tenant
         WHERE active AND workspace_digest = ${digest(key)} FOR UPDATE`;
       if (!tenant) return denied();
+      // A different tab can change the remembered tenant while this page is open.
+      if (!request.headers.has("authorization") && request.headers.get("x-tenant-id") !== tenant.id)
+        return reply(409, { error: "本机登录的企业已更改，请备份修改并重新登录" });
       if (tenant.revision !== revision) return reply(409, { error: "工作区已有更新，请备份修改后重新载入" });
       const [row] = await tx`UPDATE public.eval_tenant SET data = ${JSON.stringify(data)}::text::jsonb,
         revision = revision + 1 WHERE id = ${tenant.id} RETURNING revision`;
@@ -44,4 +57,10 @@ export async function PUT(request: Request) {
   } catch {
     return reply(503, { error: "企业工作区暂时无法保存" });
   }
+}
+
+
+export function DELETE(request: Request) {
+  if (!fromWorkspacePage(request)) return reply(403, { error: "请从企业工作区退出" });
+  return setDeviceKey(reply(200, { ok: true }), "");
 }

@@ -28,10 +28,17 @@ type Project = {id:string;name:string;rows:Trace[]};
 const projectKey="harness-eval-projects-v1";
 type Mode = "tenant" | "legacy" | "demo" | "local";
 type View = "traces" | "dataset" | "eval";
-export default function Workspace({mode,accessKey="",onExit,initialView="traces"}:{mode:Mode;initialView?:View;accessKey?:string;onExit?:()=>void}){
+export default function Workspace({mode,accessKey="",remember=false,onDenied,onExit,initialView="traces"}:{mode:Mode;initialView?:View;remember?:boolean;onDenied?:()=>void;accessKey?:string;onExit?:()=>void}){
   const [tenantName,setTenantName]=useState("");
+  const tenantId=useRef("");
   const endpoint=mode==="tenant"?"/api/tenant/workspace":"/api/workspace";
   const nas=mode==="tenant"||mode==="legacy";
+  const authHeaders=useMemo(() => {
+    const headers: Record<string,string> = {};
+    if (mode === "tenant") headers["X-Harness-Workspace"] = "1";
+    if (accessKey) headers.Authorization = "Bearer " + accessKey;
+    return headers;
+  }, [mode,accessKey]);
   const [projects,setProjects]=useState<Project[]>([{id:"default",name:"默认项目",rows:exampleTraces}]);
   const [active,setActive]=useState("default");
   const [ready,setReady]=useState(false);
@@ -42,11 +49,13 @@ export default function Workspace({mode,accessKey="",onExit,initialView="traces"
   const serialized=useMemo(()=>JSON.stringify({projects,active}),[projects,active]);
   const waitingToSave=nas && serialized!==lastSaved && ["已保存到 NAS","已从 NAS 加载"].includes(syncStatus);
   // Browser storage is restored after hydration, before enabling edits.
-  useEffect(()=>{async function restore(){try{
+  useEffect(()=>{const controller=new AbortController();async function restore(){try{
     if(nas){
-      const response=await fetch(endpoint,{headers:{Authorization:`Bearer ${accessKey}`}});
+      const response=await fetch(endpoint,{signal:controller.signal,headers:{...authHeaders,...(remember ? {"X-Remember-Key":"1"} : {})},cache:"no-store"});
+      if(response.status===401 && onDenied){onDenied();return;}
       if(!response.ok)throw Error("读取 NAS 数据失败：请检查访问密钥、数据库连接及初始化。刷新页面重试。");
       const payload=await response.json();
+      if(mode==="tenant" && payload && typeof payload==="object" && "id" in payload && typeof payload.id==="string")tenantId.current=payload.id;
       if(mode==="tenant" && payload && typeof payload==="object" && "name" in payload && typeof payload.name==="string")setTenantName(payload.name);
       const remote=workspaceResponseSchema.parse(payload);revision.current=remote.revision;
       if(remote.data){
@@ -65,7 +74,7 @@ export default function Workspace({mode,accessKey="",onExit,initialView="traces"
     if(saved){const data=JSON.parse(saved);if(!Array.isArray(data.projects)||!data.projects.length||data.projects.some((p:Project)=>!p||typeof p.id!=="string"||typeof p.name!=="string"||!Array.isArray(p.rows))||new Set(data.projects.map((p:Project)=>p.id)).size!==data.projects.length)throw Error("invalid projects");setProjects(data.projects.map((p:Project)=>({...p,rows:p.rows.map(normalize)})));setActive(data.projects.some((p:Project)=>p.id===data.active)?data.active:data.projects[0].id);}
     else{const legacy=localStorage.getItem("harness-eval-lab-v1");if(legacy){const rows=JSON.parse(legacy);if(!Array.isArray(rows))throw Error("invalid traces");setProjects([{id:"default",name:"默认项目",rows:rows.map(normalize)}]);}}
     setReady(true);
-  }catch(e){setError(e instanceof Error?e.message:"读取失败，原始数据已保留。");}}void restore();},[nas,endpoint,accessKey,mode]);
+  }catch(e){if(!controller.signal.aborted)setError(e instanceof Error?e.message:"读取失败，原始数据已保留。");}}void restore();return ()=>controller.abort();},[nas,endpoint,authHeaders,remember,onDenied,mode]);
   useEffect(()=>{if(ready && mode==="local")try{localStorage.setItem(projectKey,JSON.stringify({projects,active}));}catch{toast.error("项目保存失败：浏览器存储空间不足");}},[projects,active,ready,mode]);
   useEffect(()=>{
     if(!nas||!ready)return;
@@ -73,13 +82,13 @@ export default function Workspace({mode,accessKey="",onExit,initialView="traces"
     const timer=setInterval(async()=>{
       if(conflicted.current||saving.current||lastSaved===serialized)return;
       saving.current=true;setSyncStatus("正在保存到 NAS…");
-      try{const response=await fetch(endpoint,{method:"PUT",headers:{"Content-Type":"application/json",Authorization:`Bearer ${accessKey}`},body:JSON.stringify({data,revision:revision.current})});const result=await response.json();if(!response.ok){if(response.status===409||response.status===401){conflicted.current=true;clearInterval(timer);}throw Error(result && typeof result==="object" && "error" in result && typeof result.error==="string" ? result.error : "保存失败");}revision.current=revisionSchema.parse(result).revision;setLastSaved(serialized);setSyncStatus("已保存到 NAS");}catch(e){setSyncStatus(e instanceof Error?e.message:"保存失败，请备份本页修改");}finally{saving.current=false;}
+      try{const response=await fetch(endpoint,{method:"PUT",headers:{"Content-Type":"application/json",...authHeaders,...(mode==="tenant"?{"X-Tenant-Id":tenantId.current}:{})},body:JSON.stringify({data,revision:revision.current})});const result=await response.json();if(!response.ok){if(response.status===409||response.status===401){conflicted.current=true;clearInterval(timer);}throw Error(result && typeof result==="object" && "error" in result && typeof result.error==="string" ? result.error : "保存失败");}revision.current=revisionSchema.parse(result).revision;setLastSaved(serialized);setSyncStatus("已保存到 NAS");}catch(e){setSyncStatus(e instanceof Error?e.message:"保存失败，请备份本页修改");}finally{saving.current=false;}
     },1000);return()=>clearInterval(timer);
-  },[projects,active,ready,nas,serialized,lastSaved,endpoint,accessKey]);
+  },[projects,active,ready,nas,serialized,lastSaved,endpoint,authHeaders,mode]);
   async function importWorkspace(file:File){try{const data=JSON.parse(await file.text());if(!Array.isArray(data.projects)||!data.projects.length||data.projects.some((p:Project)=>!p||!p.id||!p.name||p.name.length>60||!Array.isArray(p.rows))||new Set(data.projects.map((p:Project)=>p.id)).size!==data.projects.length||!data.projects.some((p:Project)=>p.id===data.active))throw Error("备份格式无效");const imported=data.projects.map((p:Project)=>({...p,rows:p.rows.map(normalize)}));if(confirm("用备份替换当前全部项目？请先导出当前工作区备份。")){setProjects(imported);setActive(data.active);}}catch(e){alert(e instanceof Error?e.message:"导入失败");}}
   const project=projects.find(p=>p.id===active)??projects[0];
   function nameProject(create:boolean){const name=prompt(create?"新项目名称":"修改项目名称",create?"":project.name)?.trim();if(!name)return;if(name.length>60){alert("项目名称最多60个字符");return;}if(projects.some(p=>p.name===name&&(create||p.id!==active))){alert("已存在同名项目");return;}if(create){const id=Array.from(crypto.getRandomValues(new Uint8Array(16)),byte=>byte.toString(16).padStart(2,"0")).join("");setProjects(old=>[...old,{id,name,rows:[]}]);setActive(id);}else setProjects(old=>old.map(p=>p.id===active?{...p,name}:p));}
-  if(!ready)return <div className="content">{error||"正在载入项目…"} {onExit&&<button onClick={onExit}>返回登录</button>}</div>;
+  if(!ready)return <div className="content">{error||"正在载入项目…"} {error&&onExit&&<button onClick={onExit}>返回登录</button>}</div>;
   return <><div style={{padding:"8px 24px"}}>{tenantName&&<strong>{tenantName}　</strong>}{onExit&&<button onClick={onExit}>退出　</button>}{nas?(waitingToSave?"等待保存到 NAS…":syncStatus):mode==="demo"?"演示空间 · 刷新还原":"浏览器本地存储"} <button onClick={()=>saveFile("harness-workspace-backup.json",JSON.stringify({projects,active}))}>备份全部项目</button> <label style={{cursor:"pointer"}}>导入工作区备份<input type="file" accept=".json" style={{display:"none"}} onChange={e=>{const file=e.target.files?.[0];if(file)void importWorkspace(file);e.target.value="";}}/></label></div><Home initialView={initialView} storage={nas?"数据保存到当前工作区":mode==="demo"?"演示数据仅在本页保留":"数据保存在当前浏览器"} key={project.id} project={project} projects={projects} onSwitch={setActive} onCreate={()=>nameProject(true)} onRename={()=>nameProject(false)} setRows={update=>setProjects(old=>old.map(p=>p.id===project.id?{...p,rows:typeof update==="function"?update(p.rows):update}:p))}/></>;
 }
 function Home({initialView,storage,project,projects,onSwitch,onCreate,onRename,setRows}:{initialView:View;storage:string;project:Project;projects:Project[];onSwitch:(id:string)=>void;onCreate:()=>void;onRename:()=>void;setRows:(update:Trace[]|((old:Trace[])=>Trace[]))=>void}){
