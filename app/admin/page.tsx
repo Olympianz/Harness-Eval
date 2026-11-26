@@ -1,6 +1,6 @@
+/* eslint-disable @next/next/no-html-link-for-pages -- The production vinext router fails on client navigation; use document links. */
 "use client";
 import { useState } from "react";
-import Link from "next/link";
 import { z } from "zod";
 import { KeyEntry } from "../key-entry";
 
@@ -78,7 +78,7 @@ export default function Admin() {
     finally { setBusy(false); }
   }
   if (!token) return <><KeyEntry title="租户管理后台" description="使用平台管理员密钥管理企业和项目接入权限。" onEnter={login} /><div role="status" className="login-status">{busy ? "正在验证…" : message}</div></>;
-  return <main className="portal admin"><header><Link href="/">Harness Eval</Link><button disabled={busy} onClick={() => { setToken(""); setIssued(null); setTenants([]); setMessage(""); }}>退出管理</button></header>
+  return <main className="portal admin"><header><a href="/">Harness Eval</a><button disabled={busy} onClick={() => { setToken(""); setIssued(null); setTenants([]); setMessage(""); }}>退出管理</button></header>
     <h1>租户管理</h1><form className="create-tenant" onSubmit={e => { e.preventDefault(); void mutate({ action: "create", name }); }}>
       <label>新企业名称<input required maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder="例如：星河科技" /></label>
       <button disabled={busy} className="cta">创建租户</button>
