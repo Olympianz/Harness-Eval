@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { tenantDatabaseFailure } from "@/lib/tenant-database-error";
 import { z } from "zod";
 import { withWorkspaceDb } from "#workspace-db";
 import { digest, isOperator, issueKey, reply } from "@/lib/tenant-auth";
@@ -19,8 +20,8 @@ export async function GET(request: Request) {
   try {
     const tenants = await withWorkspaceDb(sql => sql`SELECT id, name, active FROM public.eval_tenant ORDER BY created_at, id`);
     return reply(200, { tenants });
-  } catch {
-    return reply(503, { error: "租户列表暂时无法读取" });
+  } catch (error) {
+    return reply(503, tenantDatabaseFailure(error, "租户列表暂时无法读取"));
   }
 }
 
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
         ON CONFLICT (tenant_id, project_id) DO UPDATE SET key_digest = EXCLUDED.key_digest`;
       return reply(200, { key });
     }));
-  } catch {
-    return reply(503, { error: "租户配置未能保存" });
+  } catch (error) {
+    return reply(503, tenantDatabaseFailure(error, "租户配置未能保存"));
   }
 }
