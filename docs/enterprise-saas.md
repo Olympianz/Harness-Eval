@@ -34,3 +34,7 @@ FROM public.eval_tenant t,
      jsonb_array_elements(p->'rows') r
 WHERE t.id = :'tenant_id'::uuid AND r->>'id' = :'trace_id';
 ```
+
+### 当前 Cloudflare Builds 配置
+
+`harness-eval-lab` 已连接此仓库的 `feat/enterprise-tenants` 分支。推送变更触发生产模式构建，使用现有 Hyperdrive 绑定。构建命令完成后，Wrangler 上传候选版本。发布人在 Deployments 选择本次提交对应的版本并切换流量，核对现有域名、Access 和回滚版本。
