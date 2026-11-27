@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { tenantDatabaseFailure } from "@/lib/tenant-database-error";
+import { createMember, username, password } from "@/lib/member-access";
 import { z } from "zod";
 import { withWorkspaceDb } from "#workspace-db";
 import { digest, isOperator, issueKey, reply } from "@/lib/tenant-auth";
@@ -10,6 +11,7 @@ const id = z.string().uuid();
 const operations = z.discriminatedUnion("action", [
   z.object({ action: z.literal("create"), name }),
   z.object({ action: z.literal("configure"), id, name, active: z.boolean() }),
+  z.object({ action: z.literal("bootstrap"), id, username, password }),
   z.object({ action: z.literal("rotate"), id }),
   z.object({ action: z.literal("ingest"), id, projectId: z.string().min(1).max(240) }),
 ]);
@@ -28,7 +30,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   if (!isOperator(request)) return denied();
   const parsed = operations.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return reply(400, { error: "请检查租户名称、ID 或项目 ID" });
+  if (!parsed.success) return reply(400, { error: "请检查企业 ID 及表单。账号须为 2–64 位，密码至少 12 个字符且最多 72 字节。" });
   const op = parsed.data;
   try {
     return await withWorkspaceDb(sql => sql.begin(async tx => {
@@ -38,8 +40,14 @@ export async function POST(request: Request) {
           VALUES (${randomUUID()}, ${op.name}, ${digest(key)}) RETURNING id, name, active`;
         return reply(201, { tenant, key });
       }
-      const [tenant] = await tx`SELECT id FROM public.eval_tenant WHERE id = ${op.id} FOR UPDATE`;
+      const [tenant] = await tx`SELECT id,active FROM public.eval_tenant WHERE id = ${op.id} FOR UPDATE`;
       if (!tenant) return reply(404, { error: "租户不存在" });
+      if (op.action === "bootstrap") {
+        if (!tenant.active) return reply(409,{error:"请先启用租户"});
+        const [prior] = await tx`SELECT id FROM public.eval_member WHERE tenant_id=${op.id} AND role='admin' AND active LIMIT 1`;
+        if (prior) return reply(409,{error:"本企业已有管理员，请由其管理成员"});
+        return createMember(tx, op.id, op.username, op.password, "admin");
+      }
       if (op.action === "configure") {
         await tx`UPDATE public.eval_tenant SET name = ${op.name}, active = ${op.active} WHERE id = ${op.id}`;
         return reply(200, { ok: true });

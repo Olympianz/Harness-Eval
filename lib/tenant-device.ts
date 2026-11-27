@@ -15,9 +15,9 @@ export function deviceKey(request: Request) {
   return cookie?.slice(cookieName.length + 1) ?? "";
 }
 
-export function setDeviceKey(response: Response, key: string) {
-  const maxAge = key ? 30 * day : 0;
+export function setDeviceKey(response: Response, key: string, persistent = true) {
+  const lifetime = !key ? "Max-Age=0; " : persistent ? `Max-Age=${30 * day}; ` : "";
   response.headers.append("Set-Cookie",
-    `${cookieName}=${key}; Path=${cookiePath}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Strict`);
+    `${cookieName}=${key}; Path=${cookiePath}; ${lifetime}HttpOnly; Secure; SameSite=Strict`);
   return response;
 }

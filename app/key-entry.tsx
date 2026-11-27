@@ -2,8 +2,8 @@
 "use client";
 import { useState } from "react";
 
-export function KeyEntry({ title, description, onEnter, allowRemember = false, message }: {
-  title: string; description: string; onEnter: (key: string, remember: boolean) => void; allowRemember?: boolean; message?: string;
+export function KeyEntry({ title, description, onEnter, allowRemember = false, message, alternative }: {
+  title: string; description: string; onEnter: (key: string, remember: boolean) => void; allowRemember?: boolean; message?: string; alternative?: React.ReactNode;
 }) {
   const [value, setValue] = useState("");
   const [remember, setRemember] = useState(false);
@@ -14,6 +14,7 @@ export function KeyEntry({ title, description, onEnter, allowRemember = false, m
       {allowRemember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} /> 在此设备上记住密钥（30 天）</label>}
       {message && <p role="status">{message}</p>}
       <button className="cta">进入 →</button>
+      {alternative}
     </form>
   </div></main>;
 }

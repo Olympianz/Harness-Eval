@@ -35,4 +35,25 @@ CREATE TABLE IF NOT EXISTS public.eval_ingest_key (
   PRIMARY KEY (tenant_id, project_id)
 );
 GRANT SELECT, INSERT, UPDATE ON public.eval_tenant, public.eval_ingest_key TO harness_app;
+-- Tenant accounts are separate from project backups and workspace JSON.
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+CREATE TABLE IF NOT EXISTS public.eval_member (
+  id uuid PRIMARY KEY,
+  tenant_id uuid NOT NULL REFERENCES public.eval_tenant(id),
+  username text NOT NULL,
+  role text NOT NULL CHECK (role IN ('admin','editor','viewer')),
+  active boolean NOT NULL DEFAULT true,
+  password_hash text NOT NULL,
+  failures integer NOT NULL DEFAULT 0,
+  locked_until timestamptz,
+  UNIQUE (tenant_id, username)
+);
+CREATE TABLE IF NOT EXISTS public.eval_member_session (
+  token_digest text PRIMARY KEY,
+  member_id uuid NOT NULL REFERENCES public.eval_member(id),
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS eval_member_session_member ON public.eval_member_session(member_id);
+GRANT SELECT, INSERT, UPDATE ON public.eval_member TO harness_app;
+GRANT SELECT, INSERT, DELETE ON public.eval_member_session TO harness_app;
 COMMIT;

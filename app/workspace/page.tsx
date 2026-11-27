@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import Workbench from "../workbench";
-import { KeyEntry } from "../key-entry";
+import { MemberLogin } from "./member-login";
 
 type Login = { key: string; remember: boolean };
 
@@ -25,8 +25,9 @@ export default function EnterpriseWorkspace() {
       setMessage("未能清除设备登录状态，请检查网络后再次退出。");
     }
   }
-  if (!login) return <KeyEntry title="进入企业工作区" description="输入平台管理员分配给本企业的访问密钥。"
-    allowRemember message={message} onEnter={(key, remember) => { setMessage(""); setLogin({ key, remember }); }} />;
+  if (!login) return <MemberLogin message={message}
+    onLogin={() => { setMessage(""); setLogin({key:"",remember:false}); }}
+    onKey={(key,remember) => { setMessage(""); setLogin({key,remember}); }} />;
   return <>{message && <p role="status">{message}</p>}
     <Workbench mode="tenant" accessKey={login.key} remember={login.remember} onDenied={denied} onExit={logout} /></>;
 }

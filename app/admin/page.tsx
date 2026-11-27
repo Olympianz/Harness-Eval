@@ -9,6 +9,7 @@ const responseSchema = z.object({ error: z.string().optional(), key: z.string().
 type Operation =
   | { action: "create"; name: string }
   | { action: "configure"; id: string; name: string; active: boolean }
+  | { action: "bootstrap"; id:string; username:string; password:string }
   | { action: "rotate"; id: string }
   | { action: "ingest"; id: string; projectId: string };
 
@@ -30,6 +31,17 @@ function TenantEditor({ tenant, busy, submit }: {
         <label><input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} /> 启用租户</label>
         <button>保存配置</button>
       </form>
+      <details><summary>开通首位租户管理员</summary>
+        <form onSubmit={e=>{
+          e.preventDefault();const form=e.currentTarget;const data=new FormData(form);
+          submit({action:"bootstrap",id:tenant.id,username:String(data.get("username")),password:String(data.get("password"))});
+          form.reset();
+        }}>
+          <label>管理员账号<input name="username" required pattern="[A-Za-z0-9][A-Za-z0-9._\-]{1,63}" /></label>
+          <label>初始密码<input type="password" name="password" minLength={12} required autoComplete="new-password" /></label>
+          <button disabled={!tenant.active}>开通管理员</button>
+        </form>
+      </details>
       <button onClick={() => { if (confirm("轮换后原工作区密钥立即失效。继续？")) submit({ action: "rotate", id: tenant.id }); }}>轮换企业访问密钥</button>
       <form onSubmit={e => {
         e.preventDefault();
