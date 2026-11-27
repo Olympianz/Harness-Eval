@@ -34,7 +34,18 @@ SET LOCAL lock_timeout = '3s';
 DO $$
 DECLARE
   marker jsonb := to_jsonb(txid_current());
+  tenant_probe uuid := gen_random_uuid();
 BEGIN
+  INSERT INTO public.eval_tenant (id, name, workspace_digest)
+  VALUES (tenant_probe, 'installation probe', tenant_probe::text);
+  UPDATE public.eval_tenant SET active = false WHERE id = tenant_probe;
+  INSERT INTO public.eval_ingest_key (tenant_id, project_id, key_digest)
+  VALUES (tenant_probe, 'probe', tenant_probe::text);
+  UPDATE public.eval_ingest_key SET project_id = 'verified' WHERE tenant_id = tenant_probe;
+  IF NOT EXISTS (SELECT FROM public.eval_tenant t JOIN public.eval_ingest_key k
+                 ON t.id = k.tenant_id WHERE t.id = tenant_probe AND NOT t.active AND k.project_id = 'verified') THEN
+    RAISE EXCEPTION 'tenant table readback failed';
+  END IF;
   INSERT INTO public.harness_workspace AS w (id,data,revision)
   VALUES (1, jsonb_build_object('_harness_db_probe', marker), 1)
   ON CONFLICT (id) DO UPDATE
@@ -48,6 +59,6 @@ SQL
 )
 echo '现在使用 harness_app 验证写入和读回。请输入该账号的数据库密码。'
 docker_db exec -it "$db" psql -X -W -v ON_ERROR_STOP=1 -h 127.0.0.1 -U harness_app -d harness_eval -c "$probe"
-echo 'PASS — harness_app 已写入并读回工作区表，测试事务已回滚。'
+echo 'PASS — harness_app 已写入并读回工作区表、企业租户表和项目密钥表，测试事务已回滚。'
 echo 'PostgreSQL 5432/tcp 的 NAS 端口映射：'
 docker_db port "$db" 5432/tcp || echo '未检测到宿主机端口映射。'
